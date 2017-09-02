@@ -1,0 +1,204 @@
+
+1.  Write a method in Ruby that, given an integer, will return the factorial of the integer.
+
+  def factorial(num)
+    return 1 if num == 0
+    return num * factorial(num - 1)
+  end
+
+2.  What editor do you use?
+  sublime
+
+3.  Write a method in Ruby that, given any 2 strings, will return true if the first string is contained in the second one, and false otherwise.
+
+  def check_string(string1, string2)
+    return string2.include?(string1)
+  end
+
+4.  What does this do:
+`$=`;$_=\%!;($_)=/(.)/;$==++$|;($.,$/,$,,$\,$",$;,$^,$#,$~,$*,$:,@%)=(
+$!=~/(.)(.).(.)(.)(.)(.)..(.)(.)(.)..(.)......(.)/,$"),$=++;$.++;$.++;
+$_++;$_++;($_,$\,$,)=($~.$"."$;$/$%[$?]$_$\$,$:$%[$?]",$"&$~,$#,);$,++
+;$,++;$^|=$";`$_$\$,$/$:$;$~$*$%[$?]$.$~$*${#}$%[$?]$;$\$"$^$~$*.>&$=`
+
+5.  Describe what each line of this class does.
+  class Admin
+    cattr_accessor :tabs # class variable tabs can be exposed through inheritance in other class
+      @@tabs = %w(users) # creates array and assigns to class variable tabs @@tabs = ['users']
+      class << self # all methods defined in this block are class methods. They can be accesed like Admin.add_tab and Admin.tabs without instantiating class
+        def add_tab(tab) # defines class method add_tab 
+          @@tabs = @@tabs | [tab] # it is similar to @@tabs += [tab]. it will call tabs and tab even if tabs is nil on each call
+        end
+        def tabs # defines class method tabs
+          @@tabs.sort # sorts array in ascending order
+        end
+      end
+    end
+  end
+
+6.  What is the difference between strings and symbols? What is the best case to use each one?
+  strings are mutab;e and symbol are immutable. symbols are faster than strings. using lot of symbols can cause memory issues. once created symbol is assigned an object id which cannot replaced while strings objects can be replaced.
+
+SQL and Rails
+The following data are available as a series of SQL INSERT statements at https://github.com/asee/coder_skills_assessment
+
+Table: programmers
+id  programmer     Experience  is_senior friend_id
+1 	Stallman      	4 		0 	6
+2 	knuth 	  	8 		1 	6
+3 	venema    	1 		0 	8
+4 	gates	  	9 		true  NULL
+5 	hopper    	3 		0 	3
+6 	vanrossum 	4 		0 	1
+7 	Jake  		9 		1 	7
+8 	stroustrup  	7 		1 	6
+ 
+
+Table: technologies
+ 
+id  technology
+1 c++
+2 python
+3 emacs
+4 postfix
+5 microsoft bob
+6 tex
+7 cobol
+ 
+Table: programmers_technologies
+ 
+programmer_id technology_id
+	6 	2
+	2 	6
+	5 	8
+	7 	3
+	3 	2
+	8 	1
+
+  
+For 1-5, write a SQL statement which will generate the answer, using the above tables.
+ 
+1.  Name of all senior programmers and the technology they use.
+
+  with programmer_technology as (
+  select 
+    p.programmer, t.id
+  from 
+    programmers as p 
+  inner join 
+    technologies as t 
+  on 
+    p.id == t.programmer_id
+  where 
+    is_senior = true or is_senior = '1'
+  )
+  select pt.programmer,t.technology from programmer_technology as pt
+  inner join technologies as t
+  on pt.id == t.id
+
+
+2.  Name of each programmer whose technology start with “p” or contain an “e”.
+  with programmer_technology as (
+  select 
+    p.programmer, t.id
+  from 
+    programmers as p 
+  inner join 
+    technologies as t 
+  on 
+    p.id == t.programmer_id
+  where 
+    is_senior = true or is_senior = '1'
+  )
+  select pt.programmer,t.technology from programmer_technology as pt
+  inner join technologies as t
+  on pt.id == t.id
+  where t.technology like '%p' or t.technology ~* 'e'
+
+3.  Name of each programmer that has a friend and the name of that programmer’s friend.
+
+  with programmer_friends as (
+  select programmer,friend_id from programmers
+  where friend_id is not null
+  )
+  select pg.programmer,p.programmer from programmer_friends as pf
+  inner join programmers as p
+  on pf.friend_id == p.id
+
+4.  Name of all programmers that no one has as a friend.
+
+  select programmer from programmers where friend_id is null
+
+5.  Name the programmers and their technology who has more than 7 years of experience. Group them by the technology in alphabetical order.
+  
+  with programmer_technology as (
+  select 
+    p.programmer,p.experience, t.id
+  from 
+    programmers as p 
+  inner join 
+    technologies as t 
+  on 
+    p.id == t.programmer_id
+  where 
+    is_senior = true or is_senior = '1'
+  )
+  select pt.programmer, pt.experience, t.technology from programmer_technology as pt
+  inner join technologies as t
+  on pt.id == t.id
+  where pt.experience > '7'
+  order by 3 asc
+  group by 3
+
+6.  For each technology we would like a comma-separated list of programmers.
+
+  with prog_tech_ids as (
+  select pt.programmer_id, t.technology from programmer_technologies as pt
+  inner join technologies as t
+  on pt.technology_id == t.id
+  ),
+  prog_technologies as (
+  select pti.technology,p.programmer from prog_tech_ids as pti
+  inner join programmers as p
+  on pti.programmer_id == p.id
+  )
+  select pt.technology, 
+  (SELECT GROUP_CONCAT( pt2.programmer ) FROM prog_technologies as pt2 WHERE pt2.technology = pt.technology) as programmers
+  from prog_technologies as pt
+  group by pt.technology
+
+7.  Do you have any suggestions about what to change so that it can be more flexible or extensible in the future?
+ no suggestions
+
+The following questions utilize the same tables:
+1.  Write a set of basic Rails models that fit the tables above and incorporate any identifiable relationships.
+  class Programmer < ActiveRecord::Base
+    self.table_name = 'programmers'
+    has_many :programmers_technologies
+    has_many :technologies, :through => :programmers_technologies
+  end
+
+  class Technology < ActiveRecord::Base
+    self.table_name = 'technologies'
+    has_many :programmers_technologies
+    has_many :programmers, :through => :programmers_technologies
+  end
+
+  class ProgrammerTechnology < ActiveRecord::Base
+    self.table_name = 'programmers_technologies'
+    belongs_to :programmers
+    belongs_to :technologies
+  end
+
+2.  For the following, write a Rails ActiveRecord Query that generates the answer (using the models you wrote in question 1):
+  1.  A collection of all programmers whose technology starts with a “p” or contains an “e”
+    	Programmer.technologies.where('technology LIKE "%p" OR technology ~* "e"')
+
+  2.  A collection of programmers who have no friends.
+	Programmer.where(friend_id: null)
+
+  3.  A collection of programmers who have more than 7 years of experience, grouped by technology, sorted alphabetically ascending by technology
+    	prog_technologies = {}
+	Programmer.where('experience > 7’).each do |prog|
+	  prog_technologies[prog.programmer] = prog.technologies.group_by(:technology).sort(technology: 'asc')
+	end
